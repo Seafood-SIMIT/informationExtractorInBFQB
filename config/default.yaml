@@ -1,0 +1,27 @@
+trainer:
+  stop_early: False
+  max_epochs: 200
+  devices: 1
+  strategy: 'deepspeed_stage_3'
+  accelerator: 'mps'
+  fp: 16
+  gas: 8
+  debug_mode: False
+
+data:
+  data_dir: '/Users/sunlin/Documents/workdir/ieer/infromationExtractorInBFQB-main/data/'
+  raw_file_type: json
+  max_seq_length: 128
+
+model:
+  base_model: bert-base-chinese
+
+ckpt:
+  dirpath: ckpt
+  monitor: 'train_loss'
+  save_top_k: 1
+  mode: 'min'
+  every_n_train_steps: 500
+  save_weights_only: True
+  save_last: True
+  file_name: 'Default'
