@@ -1,7 +1,7 @@
 import torch
 import pytorch_lightning as pl
 from transformers.optimization import get_linear_schedule_with_warmup
-
+import torch.nn.CrossEntropyLoss as CELoss
 class BertModule(pl.LightningModule):
 
     def __init__(self, args,model, num_data):
@@ -29,9 +29,18 @@ class BertModule(pl.LightningModule):
             input_ids=batch['input_ids'], attention_mask=batch['attention_mask'], labels=batch['labels'])
         # output = self.model(input_ids=batch['input_ids'], labels=batch['labels'])
         # acc = self.comput_metrix(output.logits, batch['labels'])
-        self.log('train_loss', output.loss,on_epoch=True, prog_bar=True,logger=True)
+        logits = output.logits
+        loss = self.countLoss(logits,batch['labels'])
+        self.log('train_loss', loss,on_epoch=True, prog_bar=True,logger=True)
         return output.loss
 
+    def countLoss(logits,label):
+        is_object = logits[0:3]
+        is_shuxing = logits[3:6]
+        is_relation = logits[6:8]
+        is_toid = logits[8:]
+        loss_object = CELoss(is_object,label[0])
+        return loss_object
     def comput_metrix(self, logits, labels):
         y_pred = torch.argmax(logits, dim=-1)
         y_pred = y_pred.view(size=(-1,))

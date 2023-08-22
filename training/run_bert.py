@@ -45,8 +45,9 @@ def main():
     args = parser.parse_args()
     hp = HParam(args.config)
 
+    
     num_labels = hp.data.max_seq_length+8
-    tokenizer,model = loadModel(hp.model,num_labels)
+    model,tokenizer = loadModel(hp.model,num_labels)
     #data
     data = BaseDataModule(tokenizer, hp.data)
     #data = WenzhongQADataModel(hp.data, tokenizer)
