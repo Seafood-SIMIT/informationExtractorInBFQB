@@ -56,7 +56,7 @@ class BaseDataset(Dataset):
         r_qb = item['data']['prompt'][0]
 
         result= item['annotations'][0]['result']
-        label_map = np.zeros((4,self.max_seq_length))
+        label_map = np.zeros((self.max_seq_length+len(relations)+3*2,self.max_seq_length))
         end_map,start_map = {},{}
         for a_result in result:
             a_result_value = a_result['value']
@@ -65,24 +65,24 @@ class BaseDataset(Dataset):
                 if a_result_value['labels'][0] == '对象':
                     # 实例
                     label_map[0][a_result_value['start']] = 1
-                    label_map[0][a_result_value['end']-1] = 3
+                    label_map[2][a_result_value['end']-1] = 1
                     if(len(a_result_value['text'])>2):
-                        label_map[0][(a_result_value['start']+1):a_result_value['end']-1] = 2
+                        label_map[1][(a_result_value['start']+1):a_result_value['end']-1] = 1
                     start_map[a_result['id']]=a_result_value['start']
 
                 elif a_result_value['labels'][0] == '属性':
-                    label_map[1][a_result_value['start']] = 1
-                    label_map[1][a_result_value['end']-1] = 3
+                    label_map[3][a_result_value['start']] = 1
+                    label_map[5][a_result_value['end']-1] = 1
                     if(len(a_result_value['text'])>2):
-                        label_map[1][(a_result_value['start']+1):a_result_value['end']-1] = 2
+                        label_map[4][(a_result_value['start']+1):a_result_value['end']-1] = 1
                     start_map[a_result['id']]=a_result_value['start']
 
             else:
                 if a_result['labels'][0] in relations:
                     start_num = start_map[a_result['from_id']]
-                    label_map[2][start_num] = relations.index(a_result['labels'][0])+1
+                    label_map[6+relations.index(a_result['labels'][0])][start_num] = 1
                     to_num = start_map[a_result['to_id']]
-                    label_map[3][start_num] = to_num
+                    label_map[6+len(relations)+to_num][start_num] = 1
         
         prompt_ids = self.tokenizer.encode_plus(r_qb,max_length=self.max_seq_length,
                                                 padding='max_length',
@@ -94,7 +94,7 @@ class BaseDataset(Dataset):
                  "attention_mask": prompt_ids['attention_mask'].squeeze().clone().detach(), 
                  #"position_ids": torch.arange(0, self.max_seq_length).clone().detach(),
                  'text': r_qb,
-                 "labels":  torch.tensor(label_map.T,dtype=torch.long).clone().detach()}
+                 "labels":  torch.tensor(label_map.T,dtype=torch.int).clone().detach()}
     
 class BaseDataModule(pl.LightningDataModule):
     def __init__(self, tokenizer, args_data):

@@ -1,7 +1,8 @@
 import torch
 import pytorch_lightning as pl
 from transformers.optimization import get_linear_schedule_with_warmup
-import torch.nn.CrossEntropyLoss as CELoss
+import torch.nn as nn
+loss_fn = nn.MultiLabelSoftMarginLoss()
 class BertModule(pl.LightningModule):
 
     def __init__(self, args,model, num_data):
@@ -26,35 +27,28 @@ class BertModule(pl.LightningModule):
         
     def training_step(self, batch, batch_idx):
         output = self.model(
-            input_ids=batch['input_ids'], attention_mask=batch['attention_mask'], labels=batch['labels'])
+            input_ids=batch['input_ids'], attention_mask=batch['attention_mask'])
         # output = self.model(input_ids=batch['input_ids'], labels=batch['labels'])
         # acc = self.comput_metrix(output.logits, batch['labels'])
         logits = output.logits
-        loss = self.countLoss(logits,batch['labels'])
+        
+        loss = self.countLoss(logits,batch['labels'].float())
         self.log('train_loss', loss,on_epoch=True, prog_bar=True,logger=True)
         return output.loss
 
-    def countLoss(logits,label):
-        is_object = logits[0:3]
-        is_shuxing = logits[3:6]
-        is_relation = logits[6:8]
-        is_toid = logits[8:]
-        loss_object = CELoss(is_object,label[0])
+    def countLoss(self,logits,label):
+        num_labels = logits.shape[-1]
+        loss_object = loss_fn(logits,label)
         return loss_object
-    def comput_metrix(self, logits, labels):
-        y_pred = torch.argmax(logits, dim=-1)
-        y_pred = y_pred.view(size=(-1,))
-        y_true = labels.view(size=(-1,)).float()
-        corr = torch.eq(y_pred, y_true)
-        acc = torch.sum(corr.float()) / labels.size()[0]
-        return acc
 
     def validation_step(self, batch, batch_idx):
         output = self.model(
-            input_ids=batch['input_ids'], attention_mask=batch['attention_mask'], labels=batch['labels'])
+            input_ids=batch['input_ids'], attention_mask=batch['attention_mask'])
         # output = self.model(input_ids=batch['input_ids'], labels=batch['labels'])
         # acc = self.comput_metrix(output.logits, batch['labels'])
-        self.log('val_loss', output.loss,on_epoch=True,prog_bar=True,logger=True)
+        logits = output.logits
+        loss = self.countLoss(logits,batch['labels'].float())
+        self.log('val_loss', loss,on_epoch=True,prog_bar=True,logger=True)
         # self.log('val_acc', acc)
 
     def configure_optimizers(self):
