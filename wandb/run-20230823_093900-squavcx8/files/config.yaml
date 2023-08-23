@@ -1,0 +1,86 @@
+wandb_version: 1
+
+trainer:
+  desc: null
+  value:
+    stop_early: false
+    max_epochs: 200
+    devices: 1
+    strategy: deepspeed_stage_3
+    accelerator: gpu
+    fp: 32
+    gas: 8
+    debug_mode: false
+data:
+  desc: null
+  value:
+    data_dir: /Users/sunlin/Documents/workdir/ieer/infromationExtractorInBFQB-main/data/
+    raw_file_type: json
+    max_seq_length: 128
+    train_batchsize: 2
+    valid_batchsize: 2
+    do_eval_only: false
+    num_workers: 0
+model:
+  desc: null
+  value:
+    base_model: bert-base-chinese
+    train_batchsize: 2
+    load_checkpoint: false
+    ckpt_dir: /root/autodl-tmp/ckpt/20230707_llam_whole/last.ckpt
+    weight_decay: 0.1
+    learning_rate: 0.0001
+    warmup_ratio: 0.01
+    adam_beta1: 0.9
+    adam_beta2: 0.95
+    adam_epsilon: 1.0e-08
+ckpt:
+  desc: null
+  value:
+    dirpath: ckpt
+    monitor: train_loss
+    save_top_k: 1
+    mode: min
+    every_n_train_steps: 500
+    save_weights_only: true
+    save_last: true
+    file_name: Default
+_wandb:
+  desc: null
+  value:
+    python_version: 3.9.16
+    cli_version: 0.15.3
+    framework: huggingface
+    huggingface_version: 4.30.2
+    is_jupyter_run: false
+    is_kaggle_kernel: true
+    start_time: 1692754740.505389
+    t:
+      1:
+      - 1
+      - 9
+      - 11
+      - 41
+      - 49
+      - 51
+      - 55
+      - 71
+      2:
+      - 1
+      - 9
+      - 11
+      - 41
+      - 49
+      - 51
+      - 55
+      - 71
+      3:
+      - 16
+      - 23
+      4: 3.9.16
+      5: 0.15.3
+      6: 4.30.2
+      8:
+      - 2
+      - 4
+      - 5

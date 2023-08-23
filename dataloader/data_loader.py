@@ -96,6 +96,27 @@ class BaseDataset(Dataset):
                  'text': r_qb,
                  "labels":  torch.tensor(label_map.T,dtype=torch.int).clone().detach()}
     
+def dataLoaderBase(tokenizer,args_data):
+        datasets = load_dataset(args_data.raw_file_type, data_files={'train':'data/train.json',
+                                                                                                        'validation':'data/valid.json',
+                                                                                                        })
+        train_dataset = BaseDataset(args_data,tokenizer,datasets['train'])
+        valid_dataset = BaseDataset(args_data,tokenizer,datasets['validation'])
+        train_loader = DataLoader(
+            train_dataset,
+            shuffle=True,
+            batch_size=args_data.train_batchsize,
+            num_workers=args_data.num_workers,
+        )
+        valid_loader = DataLoader(
+            valid_dataset,
+            batch_size=args_data.valid_batchsize,
+            shuffle=False,
+            num_workers=args_data.num_workers,
+            pin_memory=False,
+        )
+        return train_loader, valid_loader
+
 class BaseDataModule(pl.LightningDataModule):
     def __init__(self, tokenizer, args_data):
         super().__init__()

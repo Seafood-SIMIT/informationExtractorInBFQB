@@ -25,7 +25,7 @@ model:
   ckpt_dir: '/root/autodl-tmp/ckpt/20230707_llam_whole/last.ckpt'
   weight_decay: 0.1
   learning_rate: 0.0001
-  warmup: 0.01
+  warmup_ratio: 0.01
   adam_beta1: 0.9
   adam_beta2: 0.95
   adam_epsilon: 0.00000001
