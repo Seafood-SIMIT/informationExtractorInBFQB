@@ -5,12 +5,13 @@ from utils import HParam
 import torch
 def loadModel(args,num_labels):
     tokenizer = AutoTokenizer.from_pretrained(args.base_model)
+    print("num_labels被设置为",num_labels)
     model = AutoModelForTokenClassification.from_pretrained(args.base_model,num_labels=num_labels)
     return tokenizer,model
 
 if __name__=='__main__':
     hp = HParam('/Users/sunlin/Documents/workdir/ieer/infromationExtractorInBFQB-main/config/default.yaml')
-    num_labels = hp.data.max_seq_length+8
+    num_labels = hp.data.num_labels
     tokenizer, model = loadModel(hp.model,num_labels)
 
     text = '我方四只企鹅攻击了敌方指挥部'

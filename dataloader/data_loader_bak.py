@@ -22,7 +22,6 @@ class BaseDataset(Dataset):
 
     def __init__(self, args,tokenizer,data_set,add_special_tokens=True,do_sth='do_train'):
         super().__init__()
-        self.args_data = args
         self.tokenizer = tokenizer
         self.do_sth = do_sth
         #self.data_size = os.path.getsize(args.data_path)/1024/1024/1024
@@ -59,51 +58,53 @@ class BaseDataset(Dataset):
     def _trainSet(self,item):
 # time, mid, blue, red,trible, discription
         # conver to ids
+        relations=['属于','攻击','击毁','探测','成员']
         #print(item.keys())
         #print(item['data']['prompt'],'\n--------------------------annotations-----------------\n',item['annotations'][0]['result'])
-        r_qb = item['notes_dst']
+        r_qb = item['data']['prompt'][0]
 
-        #label_map = np.zeros((self.args_data.num_labels,self.max_seq_length))
-        label_map = np.zeros((self.max_seq_length))
+        result= item['annotations'][0]['result']
+        label_map = np.zeros((self.max_seq_length+len(relations)+3*2*2,self.max_seq_length))
+        end_map,start_map = {},{}
+        for a_result in result:
+            a_result_value = a_result['value']
+            # 实例标定
+            if a_result_value:
+                if a_result_value['labels'][0] == '对象':
+                    # 实例
+                    label_map[0][a_result_value['start']] = 1
+                    label_map[4][a_result_value['end']-1] = 1
+                    if(len(a_result_value['text'])>2):
+                        label_map[2][(a_result_value['start']+1):a_result_value['end']-1] = 1
+                    start_map[a_result['id']]=a_result_value['start']
+
+                elif a_result_value['labels'][0] == '属性':
+                    label_map[6][a_result_value['start']] = 1
+                    label_map[10][a_result_value['end']-1] = 1
+                    if(len(a_result_value['text'])>2):
+                        label_map[8][(a_result_value['start']+1):a_result_value['end']-1] = 1
+                    start_map[a_result['id']]=a_result_value['start']
+
+            else:
+                if len(a_result['labels'])==0:
+                    a_result['labels'] = ['属于']
+                if a_result['labels'][0] in relations:
+                    start_num = start_map[a_result['from_id']]
+                    label_map[12+relations.index(a_result['labels'][0])][start_num] = 1
+                    to_num = start_map[a_result['to_id']]
+                    label_map[12+len(relations)+to_num][start_num] = 1
         
-        #input
-        prompt_ids = self.tokenizer.encode_plus(item['notes_dst'],max_length=self.max_seq_length,
+        prompt_ids = self.tokenizer.encode_plus(r_qb,max_length=self.max_seq_length,
                                                 padding='max_length',
                                                  add_special_tokens=True,
                                                  return_attention_mask=True,
                                                  return_tensors='pt')
-        
-        #unknow
-        #time
-        time_position = item['notes_dst'].find(item['event_date_dst'])
-        label_map[time_position]=1
-        label_map[(time_position+1):time_position+len(item['event_date_dst'])-1]=2
-        label_map[time_position+len(item['event_date_dst'])-1]=3
-
-        #action1
-        time_position = item['notes_dst'].find(item['actor1_dst'])
-        #print(time_position)
-        label_map[time_position]=4
-        label_map[(time_position+1):time_position+len(item['actor1_dst'])-1]=5
-        label_map[time_position+len(item['actor1_dst'])-1]=6
-
-        #action2
-        time_position = item['notes_dst'].find(item['actor2_dst'])
-        label_map[time_position]=7
-        label_map[(time_position+1):time_position+len(item['actor2_dst'])-1]=8
-        label_map[time_position+len(item['actor2_dst'])-1]=9
-
-        #location
-        time_position = item['notes_dst'].find(item['location_dst'])
-        label_map[time_position]=10
-        label_map[(time_position+1):time_position+len(item['location_dst'])-1]=11
-        label_map[time_position+len(item['location_dst'])-1]=12
 
         return  {"input_ids": prompt_ids['input_ids'].squeeze().clone().detach(),
                  "attention_mask": prompt_ids['attention_mask'].squeeze().clone().detach(), 
                  #"position_ids": torch.arange(0, self.max_seq_length).clone().detach(),
                  'text': r_qb,
-                 "labels":  torch.tensor(label_map,dtype=torch.int).clone().detach()}
+                 "labels":  torch.tensor(label_map.T,dtype=torch.int).clone().detach()}
 
     def _testSet(self,item):
 # time, mid, blue, red,trible, discription
@@ -126,14 +127,11 @@ class BaseDataset(Dataset):
     
 def dataLoaderBase(tokenizer,args_data,do_sth):
         if do_sth == 'do_train':
-            datasets = load_dataset(args_data.raw_file_type, data_files={'train':args_data.train_file,
-                                                                        'validation':args_data.valid_file,
-                                                                        'debug':args_data.debug_file,
+            datasets = load_dataset(args_data.raw_file_type, data_files={'train':'data/result.json',
+                                                                        'validation':'data/result.json',
                                                                                                             })
-            train_set = datasets['debug'] if args_data.debug_mode  else datasets['train']
-            #print(datasets['train'][:4])
-            train_dataset = BaseDataset(args_data,tokenizer,train_set,True,'do_train')
-            valid_dataset = BaseDataset(args_data,tokenizer,train_set,True,'do_train')
+            train_dataset = BaseDataset(args_data,tokenizer,datasets['train'],True,'do_train')
+            valid_dataset = BaseDataset(args_data,tokenizer,datasets['validation'],True,'do_train')
             train_loader = DataLoader(
                 train_dataset,
                 shuffle=True,
@@ -150,9 +148,9 @@ def dataLoaderBase(tokenizer,args_data,do_sth):
             return train_loader, valid_loader
         elif do_sth == 'do_test':
             print('Reading datasets in test.json')
-            datasets = load_dataset(args_data.raw_file_type, data_files={'test':args_data.test_file,
+            datasets = load_dataset(args_data.raw_file_type, data_files={'test':'data/test.json',
                                                                                                             })
-            #print(datasets)
+            print(datasets)
             test_dataset = BaseDataset(args_data,tokenizer,datasets['test'],'do_test')
             test_loader = DataLoader(
                 test_dataset,

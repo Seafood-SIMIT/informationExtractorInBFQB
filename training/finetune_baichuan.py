@@ -14,7 +14,7 @@ import sys
 sys.path.append('.')
 
 from utils import HParam
-from dataloader.data_loader import BaseDataModule
+from dataloader.data_loader_bak import BaseDataModule
 from bertModel.loadBert import loadModel
 from modules.bertModule import BertModule
 #import nemo

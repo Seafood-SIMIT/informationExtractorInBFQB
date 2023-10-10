@@ -1,5 +1,6 @@
 """Experiment-running framework."""
 from training.training import doTrain
+from training.testing import doTest
 import argparse
 
 import numpy as np
@@ -14,16 +15,14 @@ from utils import HParam
 from dataloader.data_loader import dataLoaderBase
 from bertModel.loadBert import loadModel
 import torch.nn as nn
-loss_fn = nn.MultiLabelSoftMarginLoss()
+#loss_fn = nn.MultiLabelSoftMarginLoss()
+loss_fn = nn.CrossEntropyLoss(ignore_index=-100)
 #import nemo
-#from nemo.collections.nlp.parts.nlp_overrides import NLPDDPStrategy
-
-#from nemo.collections.nlp.parts.nlp_overrides import NLPDDPStrategy
-
-
 # In order to ensure reproducible experiments, we must set random seeds.
 np.random.seed(42)
 torch.manual_seed(42)
+import os
+os.environ["PYTORCH_ENABLE_MPS_FALLBACK"] = "1"
 
 def main():
     parser = argparse.ArgumentParser(add_help=False)
@@ -32,6 +31,9 @@ def main():
     parser.add_argument("--help", "-h", action="help")
     parser.add_argument("-c",'--config',default='config/default.yaml', type=str, help='set the config file')
     parser.add_argument("-m","--model_name", type=str, required= True, help='model name')
+    parser.add_argument("--do_test", type=bool, default=False, help='whether do the test step only')
+
+    parser.add_argument("--do_train", type=bool, default=True, help='whether do the test step only')
 
     args = parser.parse_args()
     hp = HParam(args.config)
@@ -41,15 +43,26 @@ def main():
     logging.basicConfig(level=logging.INFO)  # 设置全局日志级别为INFO
     logger = logging.getLogger(__name__)  # 获取当前模块的logger
 
-    device = torch.device("cuda"if torch.cuda.is_available else"cpu")
+    device = torch.device("mps"if torch.backends.mps.is_available else"cpu")
 
-    
-    num_labels = hp.data.max_seq_length+8
+    #os.mkdir(f'outputs/model/{args.model_name}')
+    num_labels = hp.model.num_labels
+    hp.data.num_labels = hp.model.num_labels
+    hp.data.debug_mode = hp.trainer.debug_mode
     tokenizer,model = loadModel(hp.model,num_labels)
+
+    if args.do_test:
+        model = torch.load(hp.model.ckpt_dir)
+        test_loader = dataLoaderBase(tokenizer, hp.data,'do_test')
+        doTest(hp,model,test_loader,loss_fn,logger,device)
+        return 0
     #data
-    train_loader,valid_loader = dataLoaderBase(tokenizer, hp.data)
+    train_loader,valid_loader = dataLoaderBase(tokenizer, hp.data,'do_train')
     # Criterion
-    doTrain(hp,model,train_loader,valid_loader,loss_fn,logger,device)
+    #wandb.init()
+    if args.do_train:
+        doTrain(hp,model,train_loader,valid_loader,loss_fn,logger,device,name=args.model_name)
+    
     # Call baks
 
 if __name__ == "__main__":
