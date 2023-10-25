@@ -10,10 +10,9 @@ import sys
 sys.path.append('.')
 import wandb
 import logging
+import importlib
 
 from utils import HParam
-from dataloader.data_loader import dataLoaderBase
-from bertModel.loadBert import loadModel
 import torch.nn as nn
 #loss_fn = nn.MultiLabelSoftMarginLoss()
 loss_fn = nn.CrossEntropyLoss(ignore_index=-100)
@@ -46,10 +45,12 @@ def main():
     device = torch.device("mps"if torch.backends.mps.is_available else"cpu")
 
     #os.mkdir(f'outputs/model/{args.model_name}')
-    num_labels = hp.model.num_labels
-    hp.data.num_labels = hp.model.num_labels
+    hp.data.num_labels = hp.model.num_classes
     hp.data.debug_mode = hp.trainer.debug_mode
-    tokenizer,model = loadModel(hp.model,num_labels)
+
+    loadModel = getattr(importlib.import_module(hp.model.lib_name),'loadModel')
+    dataLoaderBase = getattr(importlib.import_module(hp.data.lib_data),'dataLoaderBase')
+    tokenizer,model = loadModel(hp.model)
 
     if args.do_test:
         model = torch.load(hp.model.ckpt_dir)

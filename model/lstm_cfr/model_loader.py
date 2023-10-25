@@ -1,12 +1,13 @@
-from transformers import AutoTokenizer, AutoModelForTokenClassification
-import sys
-sys.path.append('/Users/sunlin/Documents/workdir/ieer/infromationExtractorInBFQB-main/')
-from utils import HParam
+from .lstmCFR import BiLSTMCRFModel
+from transformers import AutoTokenizer
 import torch
 def loadModel(args,num_labels):
     tokenizer = AutoTokenizer.from_pretrained(args.base_model)
     print("num_labels被设置为",num_labels)
-    model = AutoModelForTokenClassification.from_pretrained(args.base_model,num_labels=num_labels)
+    model = BiLSTMCRFModel(vocab_size=tokenizer.vocab_size, num_tags=num_labels,
+                           embedding_dim=args.max_seq_length,
+                           hidden_dim=args.hidden_dim,
+                           lstm_layers=args.lstm_layers)
     return tokenizer,model
 
 if __name__=='__main__':

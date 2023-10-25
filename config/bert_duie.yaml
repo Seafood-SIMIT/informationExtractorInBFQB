@@ -1,0 +1,55 @@
+trainer:
+  stop_early: False
+  max_epochs: 100
+  devices: 1
+  strategy: 'deepspeed_stage_3'
+  accelerator: 'gpu'
+  fp: 32
+  gas: 8
+  debug_mode: True
+
+data:
+  lib_data: dataloader.duie.data_loader
+  debug_mode: False
+  num_labels: 13
+  data_dir: 'data/duie'
+  train_file: 'train.json'
+  valid_file: 'dev.json'
+  test_file: 'test.json'
+  debug_file: 'debug.json'
+  raw_file_type: 'json'
+  max_seq_length: 256
+  train_batchsize: 2
+  valid_batchsize: 2
+  test_batchsize: 1
+  do_eval_only: False
+  num_workers: 0
+  
+model:
+  base_model: bert-base-chinese
+  lib_name: model.bertModel.model_loader
+  train_batchsize: 16
+  max_length: 128
+  hidden_size: 128
+  num_classes: 13
+  num_relations: 32
+  num_heads: 1
+  #cache_dir: '/Volumes/T7/FileBackup/lora_model/llama_opemlmlab'
+  load_checkpoint: False
+  ckpt_dir: 'outputs/model/20231003_russiadataset-39-0.005979645330734132.model'
+  weight_decay: 0.1
+  learning_rate: 0.0001
+  warmup_ratio: 0.01
+  adam_beta1: 0.9
+  adam_beta2: 0.95
+  adam_epsilon: 0.00000001
+
+ckpt:
+  dirpath: ckpt
+  monitor: 'train_loss'
+  save_top_k: 1
+  mode: 'min'
+  every_n_train_steps: 500
+  save_weights_only: True
+  save_last: True
+  file_name: 'Default'

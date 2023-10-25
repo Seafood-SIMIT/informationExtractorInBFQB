@@ -1,0 +1,57 @@
+trainer:
+  stop_early: False
+  max_epochs: 100
+  devices: 1
+  strategy: 'deepspeed_stage_3'
+  accelerator: 'gpu'
+  fp: 32
+  gas: 8
+  debug_mode: False
+
+data:
+  lib_data: dataloader.duie.data_loader
+  debug_mode: False
+  num_labels: 13
+  data_dir: 'data/'
+  train_file: 'data/train.json'
+  valid_file: 'data/valid.json'
+  test_file: 'data/test.json'
+  debug_file: 'data/debug.json'
+  raw_file_type: 'json'
+  max_seq_length: 256
+  train_batchsize: 2
+  valid_batchsize: 2
+  test_batchsize: 1
+  do_eval_only: False
+  num_workers: 0
+  
+model:
+  base_model: bert-base-chinese
+  num_labels: 13
+  lib_name: model.lstm_cfr.model_loader
+  start_tag: '<START>'
+  stop_tag: '<STOP>'
+  embedding_dim: 5
+  hidden_dim: 4
+  # 构造tag_to_ix词典，每一个tag有一个唯一的编码
+  tag_to_ix: {"B": 0, "I": 1, "O": 2, START_TAG: 3, STOP_TAG: 4}
+  train_batchsize: 16
+  #cache_dir: '/Volumes/T7/FileBackup/lora_model/llama_opemlmlab'
+  load_checkpoint: False
+  ckpt_dir: 'outputs/model/20231003_russiadataset-39-0.005979645330734132.model'
+  weight_decay: 0.1
+  learning_rate: 0.0001
+  warmup_ratio: 0.01
+  adam_beta1: 0.9
+  adam_beta2: 0.95
+  adam_epsilon: 0.00000001
+
+ckpt:
+  dirpath: ckpt
+  monitor: 'train_loss'
+  save_top_k: 1
+  mode: 'min'
+  every_n_train_steps: 500
+  save_weights_only: True
+  save_last: True
+  file_name: 'Default'
