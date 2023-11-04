@@ -76,7 +76,8 @@ class BaseDataset(Dataset):
 
         #label_map = np.zeros((self.args_data.num_labels,self.max_seq_length))
         label_map = np.zeros((self.max_seq_length))
-        label_predicate = np.zeros((len(self.labelkey_map)))
+        label_anchor = np.zeros((5,3))
+        label_predicate = np.zeros(5)
         
         #input
         #prompt_ids = self.tokenizer.encode_plus(item['notes_dst'],max_length=self.max_seq_length,
@@ -88,7 +89,7 @@ class BaseDataset(Dataset):
         
         #unknow
         #object
-        for spo in spo_list:
+        for i,spo in enumerate(spo_list):
             object_position = text_raw.find(spo['object']['@value'])
         #time_position = item['notes_dst'].find(item['event_date_dst'])
             label_map[object_position]=1
@@ -102,9 +103,13 @@ class BaseDataset(Dataset):
             label_map[(subject_position+1):subject_position+len(spo['subject'])-1]=5
             label_map[subject_position+len(spo['subject'])-1]=6
 
+            label_anchor[i,0] = 1
+            label_anchor[i,1] = object_position/self.max_seq_length
+            label_anchor[i,2] = (subject_position - object_position)/self.max_seq_length
             #label map
             if spo['predicate'] in self.labelkey_map.keys():
-                label_subject = label_map[spo['predicate']]
+                label_predicate[i] = self.labelkey_map[spo['predicate']]
+
                 #未完待续
 
 
@@ -112,8 +117,9 @@ class BaseDataset(Dataset):
                  "attention_mask": prompt_ids['attention_mask'].squeeze().clone().detach(), 
                  #"position_ids": torch.arange(0, self.max_seq_length).clone().detach(),
                  'text': text_raw,
-                 "labels":  torch.tensor(label_map,dtype=torch.int).clone().detach(),
-                 'predict_label': torch.tensor()}
+                 "label_entities":  torch.tensor(label_map,dtype=torch.int).clone().detach(),
+                 'label_anchor': torch.tensor(label_anchor,dtype=torch.float).clone().detach(),
+                 'label_relations': torch.tensor(label_predicate,dtype=torch.int).clone().detach()}
 
     def _testSet(self,item):
 # time, mid, blue, red,trible, discription

@@ -11,7 +11,7 @@ trainer:
 data:
   lib_data: dataloader.duie.data_loader
   debug_mode: False
-  num_labels: 13
+  num_labels: 7
   data_dir: 'data/duie'
   train_file: 'train.json'
   valid_file: 'dev.json'
@@ -31,8 +31,9 @@ model:
   train_batchsize: 16
   max_length: 128
   hidden_size: 128
-  num_classes: 13
+  num_classes: 7
   num_relations: 32
+  num_anchor: 5
   num_heads: 1
   #cache_dir: '/Volumes/T7/FileBackup/lora_model/llama_opemlmlab'
   load_checkpoint: False

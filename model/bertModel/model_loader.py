@@ -8,10 +8,10 @@ def loadModel(args):
     print("num_labels被设置为",args.num_classes)
     base_model = AutoModelForTokenClassification.from_pretrained(args.base_model,num_labels=args.num_classes)
     model = BERTAttention(object_model=base_model,
-                          hidden_size = args.hidden_size,
-                          num_classes = args.num_classes,
-                          num_relations = args.num_relations,
+                        max_seq_length = args.max_seq_length,
                           num_heads = args.num_heads,
+                          num_anchor=args.num_anchor,
+                          num_relation = args.num_relations
                           )
     return tokenizer,model
 

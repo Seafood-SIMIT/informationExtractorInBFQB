@@ -47,6 +47,7 @@ def main():
     #os.mkdir(f'outputs/model/{args.model_name}')
     hp.data.num_labels = hp.model.num_classes
     hp.data.debug_mode = hp.trainer.debug_mode
+    hp.model.max_seq_length = hp.data.max_seq_length
 
     loadModel = getattr(importlib.import_module(hp.model.lib_name),'loadModel')
     dataLoaderBase = getattr(importlib.import_module(hp.data.lib_data),'dataLoaderBase')

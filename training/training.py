@@ -1,26 +1,33 @@
 import time
 import torch
+import torch.nn as nn
 from transformers.optimization import get_linear_schedule_with_warmup
 from tqdm import tqdm
 import wandb
+
 def forwardModel(batch,device,model,loss_fn):
+    lossfn_anchor = nn.MSELoss()
+    lossfn_relation = nn.CrossEntropyLoss()
     input_ids = batch['input_ids'].to(device)
     attention_mask = batch['attention_mask'].to(device)
-    labels = batch['labels'].to(device)
+    label_entities = batch['label_entities'].to(device)
+    label_anchor = batch['label_anchor'].to(device)
+    label_relations = batch['label_relations'].to(device)
+
     #print(labels.shape)
-    output = model(input_ids = input_ids, attention_mask = attention_mask,labels=labels)
+    output = model(input_ids = input_ids, attention_mask = attention_mask,labels=label_entities)
             
-    #print(logits.shape,labels.shape)
-    #loss = loss_fn(logits, labels)
-    logits = output.logits
-    loss = output.loss
-    return logits,loss
+    #print(output['predict_anchor'].shape,label_anchor.shape,output['predict_relation'].shape,label_relations.shape)
+    loss = output['loss_bert'] + lossfn_anchor(output['predict_anchor'],label_anchor) + lossfn_relation(output['predict_relation'].view(-1,output['predict_relation'].shape[-1]),label_relations.view(-1))
+    #loss = lossfn_anchor(output['predict_anchor'],label_anchor) 
+    #loss = lossfn_relation(output['predict_relation'].view(-1,output['predict_relation'].shape[-1]),label_relations.view(-1))
+    return output['predict_entity'], output['predict_anchor'],output['predict_relation'],loss 
 
 def validateEpoch(valid_loader,device,model,loss_fn,logger):
     loss_valid = 0
     model.eval()
     for step , batch in enumerate(valid_loader):
-        logits, loss = forwardModel(batch,device,model,loss_fn)
+        entities_predict, anchor_predict,relation_predict,loss  = forwardModel(batch,device,model,loss_fn)
 
         loss_valid+=loss.item()
 
@@ -48,7 +55,7 @@ def doTrain(hp,model,train_loader,valid_loader,loss_fn,logger,device,name='test'
         train_data_loader = tqdm(train_loader, desc=f"Epoch {epoch}", leave=False, ncols=100)
         loss_epoch = 0
         for step , batch in enumerate(train_data_loader):
-            logits, loss = forwardModel(batch,device,model,loss_fn)
+            entities_predict, anchor_predict,relation_predict,loss  = forwardModel(batch,device,model,loss_fn)
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
@@ -62,11 +69,13 @@ def doTrain(hp,model,train_loader,valid_loader,loss_fn,logger,device,name='test'
             # 更新tqdm进度条
             train_data_loader.set_postfix({"loss": loss.item()}, refresh=True)
         toc_epoch = time.time()
-        logger.info(f"Epoch {epoch} took {toc_epoch - tic_epoch:.2f} seconds")
+        #logger.info(f"Epoch {epoch} took {toc_epoch - tic_epoch:.2f} seconds")
+        logger.info(f"Epoch {epoch} Loss {loss_epoch/len(train_data_loader)}")
         # 使用wandb记录损失
-        #wandb.log({"train_loss_epoch": loss_epoch/(len(train_loader)*hp.data.train_batchsize)})
-        val_loss = validateEpoch(valid_loader,device,model,loss_fn,logger)
-        if (epoch+1)%10==0:
-            torch.save(model,f'outputs/model/{name}-{epoch}-{val_loss}.model')
+        if not hp.trainer.debug_mode:
+            #wandb.log({"train_loss_epoch": loss_epoch/(len(train_loader)*hp.data.train_batchsize)})
+            val_loss = validateEpoch(valid_loader,device,model,loss_fn,logger)
+            if (epoch+1)%10==0:
+                torch.save(model,f'outputs/model/{name}-{epoch}-{val_loss:.2f}.model')
 
 
