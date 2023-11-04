@@ -11,7 +11,7 @@ def loadModel(args):
                         max_seq_length = args.max_seq_length,
                           num_heads = args.num_heads,
                           num_anchor=args.num_anchor,
-                          num_relation = args.num_relations
+                          num_relation = args.num_relation
                           )
     return tokenizer,model
 

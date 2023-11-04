@@ -11,6 +11,7 @@ sys.path.append('.')
 import wandb
 import logging
 import importlib
+import json
 
 from utils import HParam
 import torch.nn as nn
@@ -48,6 +49,11 @@ def main():
     hp.data.num_labels = hp.model.num_classes
     hp.data.debug_mode = hp.trainer.debug_mode
     hp.model.max_seq_length = hp.data.max_seq_length
+    with open("./data/duie/predicate2id.json", 'r', encoding='utf8') as fp:
+        label_map = json.load(fp)
+    
+    hp.model.num_relation = 2 * (len(label_map.keys()) - 2) + 2
+    print('关系的数量为{}'%{hp.model.num_relation})
 
     loadModel = getattr(importlib.import_module(hp.model.lib_name),'loadModel')
     dataLoaderBase = getattr(importlib.import_module(hp.data.lib_data),'dataLoaderBase')

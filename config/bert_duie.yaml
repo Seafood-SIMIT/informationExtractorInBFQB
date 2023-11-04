@@ -1,12 +1,12 @@
 trainer:
   stop_early: False
-  max_epochs: 100
+  max_epochs: 400
   devices: 1
   strategy: 'deepspeed_stage_3'
   accelerator: 'gpu'
   fp: 32
   gas: 8
-  debug_mode: True
+  debug_mode: False
 
 data:
   lib_data: dataloader.duie.data_loader
@@ -32,8 +32,8 @@ model:
   max_length: 128
   hidden_size: 128
   num_classes: 7
-  num_relations: 32
-  num_anchor: 5
+  num_relation: 32
+  num_anchor: 10
   num_heads: 1
   #cache_dir: '/Volumes/T7/FileBackup/lora_model/llama_opemlmlab'
   load_checkpoint: False
