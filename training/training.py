@@ -81,8 +81,8 @@ def doTrain(hp,model,train_loader,valid_loader,loss_fn,logger,device,name='test'
         if not hp.trainer.debug_mode:
             #wandb.log({"train_loss_epoch": loss_epoch/(len(train_loader)*hp.data.train_batchsize)})
             val_loss = validateEpoch(valid_loader,device,model,loss_fn,logger)
-            if (epoch)%2==0:
-                #torch.save(model,f'outputs/model/{name}-{epoch}-{val_loss:.2f}.model')
-                torch.save(model,f'/root/autodl-tmp/output/model/{name}-{epoch}-{val_loss:.2f}.model')
+            if (epoch)%10==0:
+                torch.save(model,f'output/model/{name}-{epoch}-{val_loss:.2f}.model')
+                #torch.save(model,f'/root/autodl-tmp/output/model/{name}-{epoch}-{val_loss:.2f}.model')
 
 

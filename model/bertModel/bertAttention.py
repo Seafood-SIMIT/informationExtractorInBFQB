@@ -2,7 +2,7 @@ import torch.nn as nn
 import torch
 
 class BERTAttention(nn.Module):
-    def __init__(self, object_model,max_seq_length,num_heads,num_anchor,num_relation):
+    def __init__(self, object_model,max_seq_length,num_heads=2,num_anchor=10,num_relation=56):
         super(BERTAttention, self).__init__()
 
         self.max_seq_length = max_seq_length
@@ -36,7 +36,7 @@ class BERTAttention(nn.Module):
             nn.LeakyReLU(),
             nn.Linear(1024,out_features=num_anchor*(3+num_relation)),
             #nn.BatchNorm1d(3),
-            nn.Sigmoid(),
+            #nn.Sigmoid(),
         ) 
     
 
@@ -52,13 +52,16 @@ class BERTAttention(nn.Module):
         query =input_ids.unsqueeze(2).float()
         key = logits[:,:,0:1]
         value = logits[:,:,6:7]
-        #print(query.shape,key.shape,value.shape)
-        attention_output, _ = self.attention_layer(query,key,value)
+        logits_argmax = torch.argmax(logits,dim=2).clone().detach().unsqueeze(2)
+        #print(query.shape,query.dtype,logits_argmax.shape,logits_argmax.dtype)
+        bert_output = torch.cat([query,logits_argmax],dim=1)
+        attention_output, _ = self.attention_layer(bert_output,bert_output,bert_output)
 
 
-        classify_input = attention_output * query.int()
+        classify_input = attention_output * bert_output
 
         lstm_output, _ = self.lstm(classify_input)
+        #lstm_output, _ = self.lstm(bert_output)
 
         #relation
         #print(lstm_output[:,-1,:].shape)
@@ -69,10 +72,10 @@ class BERTAttention(nn.Module):
         x = self.fc1(x)
         x = x.view(classifier_out.size(0), self.anchor_num,3+self.num_relation)
 
-        #for i in range(3):
-        #    x[:,:,i] = torch.sigmoid(x[:,:,i])
-        #predict_anchor = x[:,:,0:3]
-        #predict_relation = x[:,:,3:]
+        for i in range(3):
+            x[:,:,i] = x[:,:,i]
+        predict_anchor = x[:,:,0:3]
+        predict_relation = x[:,:,3:]
 
         
         return {'predict_entity':logits,
@@ -86,7 +89,7 @@ if __name__ == '__main__':
     from transformers import AutoTokenizer,BertForTokenClassification
     #tokenizer = AutoTokenizer.from_pretrained('bert-base-chinese')
     #bert_model = BertForTokenClassification.from_pretrained('bert-base-chinese',num_labels=12)
-    model_dir = '/root/autodl-tmp/bert/bert-base-chinese'
+    model_dir = 'bert-base-chinese'
     tokenizer = AutoTokenizer.from_pretrained(model_dir)
     bert_model = BertForTokenClassification.from_pretrained(model_dir,num_labels=12)
 
