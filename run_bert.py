@@ -44,6 +44,8 @@ def main():
     logger = logging.getLogger(__name__)  # 获取当前模块的logger
 
     device = torch.device("mps"if torch.backends.mps.is_available else"cpu")
+    device = torch.device("cuda")if torch.cuda.is_available else device
+    print("using device as ",device)
 
     #os.mkdir(f'outputs/model/{args.model_name}')
     hp.data.num_labels = hp.model.num_classes
@@ -53,7 +55,7 @@ def main():
         label_map = json.load(fp)
     
     hp.model.num_relation = 2 * (len(label_map.keys()) - 2) + 2
-    print('关系的数量为{}'%{hp.model.num_relation})
+    print('关系的数量为',hp.model.num_relation//2)
 
     loadModel = getattr(importlib.import_module(hp.model.lib_name),'loadModel')
     dataLoaderBase = getattr(importlib.import_module(hp.data.lib_data),'dataLoaderBase')

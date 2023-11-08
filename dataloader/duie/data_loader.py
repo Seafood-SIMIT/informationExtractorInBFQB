@@ -31,6 +31,8 @@ class BaseDataset(Dataset):
         self.max_seq_length = args.max_seq_length
         #self.max_seq_length =-1
         self.add_special_tokens = add_special_tokens
+        
+        self.num_anchor = args.num_anchor
 
         with open("./data/duie/predicate2id.json", 'r', encoding='utf8') as fp:
             self.labelkey_map = json.load(fp)
@@ -76,8 +78,8 @@ class BaseDataset(Dataset):
 
         #label_map = np.zeros((self.args_data.num_labels,self.max_seq_length))
         label_map = np.zeros((self.max_seq_length))
-        label_anchor = np.zeros((5,3))
-        label_predicate = np.zeros(5)
+        label_anchor = np.zeros((self.num_anchor,3))
+        label_predicate = np.zeros(self.num_anchor)
         
         #input
         #prompt_ids = self.tokenizer.encode_plus(item['notes_dst'],max_length=self.max_seq_length,
@@ -90,6 +92,8 @@ class BaseDataset(Dataset):
         #unknow
         #object
         for i,spo in enumerate(spo_list):
+            if i >= 20:
+                break
             object_position = text_raw.find(spo['object']['@value'])
         #time_position = item['notes_dst'].find(item['event_date_dst'])
             label_map[object_position]=1
@@ -117,9 +121,9 @@ class BaseDataset(Dataset):
                  "attention_mask": prompt_ids['attention_mask'].squeeze().clone().detach(), 
                  #"position_ids": torch.arange(0, self.max_seq_length).clone().detach(),
                  'text': text_raw,
-                 "label_entities":  torch.tensor(label_map,dtype=torch.int).clone().detach(),
+                 "label_entities":  torch.tensor(label_map,dtype=torch.long).clone().detach(),
                  'label_anchor': torch.tensor(label_anchor,dtype=torch.float).clone().detach(),
-                 'label_relations': torch.tensor(label_predicate,dtype=torch.int).clone().detach()}
+                 'label_relations': torch.tensor(label_predicate,dtype=torch.long).clone().detach()}
 
     def _testSet(self,item):
 # time, mid, blue, red,trible, discription
@@ -150,7 +154,7 @@ def dataLoaderBase(tokenizer,args_data,do_sth):
             train_set =  datasets['train']
             #print(datasets['train'][:4])
             train_dataset = BaseDataset(args_data,tokenizer,train_set,True,'do_train')
-            valid_dataset = BaseDataset(args_data,tokenizer,train_set,True,'do_train')
+            valid_dataset = BaseDataset(args_data,tokenizer,datasets['validation'],True,'do_train')
             train_loader = DataLoader(
                 train_dataset,
                 shuffle=True,

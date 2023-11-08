@@ -15,7 +15,29 @@ class BERTAttention(nn.Module):
 
         self.num_relation = num_relation
 
-        self.classifier = nn.Linear(in_features=max_seq_length,out_features=num_anchor*(3+num_relation))
+        self.fc = nn.Linear(in_features=max_seq_length,out_features=num_anchor*(3+num_relation))
+        self.conv = nn.Sequential(
+            #cnn1hp.signal.wavelet_energyfeatures
+            nn.Conv1d(1, 32, kernel_size=5, stride=2,bias=True),#nx48x29
+            nn.Conv1d(32, 32, kernel_size=1, stride=1,bias=True),#nx48x29
+            #nn.LayerNorm(32),
+            nn.LeakyReLU(),
+            nn.Conv1d(32, 64, kernel_size=3, stride=2,bias=True),#nx64x6
+            nn.Conv1d(64, 64, kernel_size=1, stride=1,bias=True),#nx64x6
+            #nn.LayerNorm(64),
+            nn.LeakyReLU(),
+            nn.Conv1d(64, 8, kernel_size=4, stride=1,bias=True),#nxclass_numx1
+            nn.Conv1d(8, 8, kernel_size=4, stride=1,bias=True),#nxclass_numx1
+            nn.ReLU(),
+            )
+        self.fc1 = nn.Sequential(
+            nn.Linear(736,1024),
+            #nn.BatchNorm1d(64),
+            nn.LeakyReLU(),
+            nn.Linear(1024,out_features=num_anchor*(3+num_relation)),
+            #nn.BatchNorm1d(3),
+            nn.Sigmoid(),
+        ) 
     
 
     def forward(self, input_ids, attention_mask,labels = None):
@@ -42,13 +64,15 @@ class BERTAttention(nn.Module):
         #print(lstm_output[:,-1,:].shape)
         lstm_output = lstm_output[:,-1,:].unsqueeze(1)
         #print(lstm_output.shape) #[b,1,256]
-        classifier_out = self.classifier(lstm_output)
-        x = classifier_out.view(classifier_out.size(0), self.anchor_num,3+self.num_relation)
+        classifier_out = self.conv(lstm_output)
+        x = classifier_out.view(classifier_out.size(0),-1)
+        x = self.fc1(x)
+        x = x.view(classifier_out.size(0), self.anchor_num,3+self.num_relation)
 
-        for i in range(3):
-            x[:,:,i] = torch.sigmoid(x[:,:,i])
-        predict_anchor = x[:,:,0:3]
-        predict_relation = torch.softmax(x[:,:,3:],dim=2)
+        #for i in range(3):
+        #    x[:,:,i] = torch.sigmoid(x[:,:,i])
+        #predict_anchor = x[:,:,0:3]
+        #predict_relation = x[:,:,3:]
 
         
         return {'predict_entity':logits,
@@ -60,10 +84,13 @@ class BERTAttention(nn.Module):
 
 if __name__ == '__main__':
     from transformers import AutoTokenizer,BertForTokenClassification
-    tokenizer = AutoTokenizer.from_pretrained('bert-base-chinese')
-    bert_model = BertForTokenClassification.from_pretrained('bert-base-chinese',num_labels=12)
+    #tokenizer = AutoTokenizer.from_pretrained('bert-base-chinese')
+    #bert_model = BertForTokenClassification.from_pretrained('bert-base-chinese',num_labels=12)
+    model_dir = '/root/autodl-tmp/bert/bert-base-chinese'
+    tokenizer = AutoTokenizer.from_pretrained(model_dir)
+    bert_model = BertForTokenClassification.from_pretrained(model_dir,num_labels=12)
 
-    model = BERTAttention(object_model = bert_model,max_seq_length = 256,num_heads =1,num_anchor = 5,num_relation = 32)
+    model = BERTAttention(object_model = bert_model,max_seq_length = 400,num_heads =1,num_anchor = 10,num_relation = 56)
     
     fake_input = torch.randint(1,10,(2,128))
     labels = torch.zeros((2,128),dtype = torch.long)
