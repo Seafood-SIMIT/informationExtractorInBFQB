@@ -44,7 +44,7 @@ def main():
     logger = logging.getLogger(__name__)  # 获取当前模块的logger
 
     device = torch.device("mps"if torch.backends.mps.is_available else"cpu")
-    #device = torch.device("cuda") if torch.cuda.is_available else device
+    device = torch.device("cuda") if torch.cuda.is_available else device
     print("using device as ",device)
 
     #os.mkdir(f'outputs/model/{args.model_name}')

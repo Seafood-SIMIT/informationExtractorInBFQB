@@ -20,15 +20,14 @@ data:
   debug_file: 'debug.json'
   raw_file_type: 'json'
   max_seq_length: 400
-  train_batchsize: 16
+  train_batchsize: 64
   valid_batchsize: 16
   test_batchsize: 1
   do_eval_only: False
   num_workers: 0
   
 model:
-  #base_model: /root/autodl-tmp/bert/bert-base-chinese
-  base_model: bert-base-chinese
+  base_model: /root/autodl-tmp/bert/bert-base-chinese
   lib_name: model.bertModel.model_loader
   train_batchsize: 10240
   max_length: 1024
@@ -41,7 +40,7 @@ model:
   load_checkpoint: False
   ckpt_dir: 'outputs/model/20231003_russiadataset-39-0.005979645330734132.model'
   weight_decay: 0.1
-  learning_rate: 0.0001
+  learning_rate: 0.001
   warmup_ratio: 0.01
   adam_beta1: 0.9
   adam_beta2: 0.95
