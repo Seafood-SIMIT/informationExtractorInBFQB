@@ -3,30 +3,26 @@ import torch
 import torch.nn as nn
 from transformers.optimization import get_linear_schedule_with_warmup
 from tqdm import tqdm
-import wandb
+from model.bertModel.bertLoss import LossFn
 
 def forwardModel(batch,device,model,loss_fn):
-    lossfn_anchor = nn.MSELoss()
-    lossfn_relation = nn.CrossEntropyLoss()
+    lossfn = LossFn()
     input_ids = batch['input_ids'].to(device)
     attention_mask = batch['attention_mask'].to(device)
     label_entities = batch['label_entities'].to(device)
     label_anchor = batch['label_anchor'].to(device)
+    label_conf = batch['label_conf'].to(device)
     label_relations = batch['label_relations'].to(device)
 
     #print(labels.shape)
     output = model(input_ids = input_ids, attention_mask = attention_mask,labels=label_entities)
             
-    #print(output['predict_anchor'].shape,label_anchor.shape,output['predict_relation'].shape,label_relations.shape)
-    #loss = output['loss_bert'] + lossfn_anchor(output['predict_anchor'],label_anchor) + lossfn_relation(output['predict_relation'].view(-1,output['predict_relation'].shape[-1]),label_relations.view(-1))
-    #loss = lossfn_anchor(output['predict_anchor'],label_anchor) 
-    #loss = lossfn_relation(output['predict_relation'].view(-1,output['predict_relation'].shape[-1]),label_relations.view(-1))
-    loss_relation = 0
-    for i in range(output['predict_relation'].size(1)):
-        single_realtion = output['predict_relation'][:,i,:]
-        loss_relation+=lossfn_relation(single_realtion,label_relations[:,i])
+    #loss_relation=lossfn_relation(output['predict_relation'].view(-1,output['predict_relation'].size(2)),label_relations.view(-1))
         
-    loss = loss_relation/output['predict_relation'].size(1) + output['loss_bert'] + lossfn_anchor(output['predict_anchor'],label_anchor)
+    #loss = loss_relation/output['predict_relation'].size(1) + output['loss_bert'] + lossfn_anchor(output['predict_anchor'],label_anchor)
+    #print(output['predict_relation'].shape)
+    #print(label_relations,torch.argmax(output['predict_relation'],dim=2))
+    loss = lossfn(output,label_conf,label_anchor,label_relations)# + output['loss_bert']
     return output['predict_entity'], output['predict_anchor'],output['predict_relation'],loss 
 
 def validateEpoch(valid_loader,device,model,loss_fn,logger):

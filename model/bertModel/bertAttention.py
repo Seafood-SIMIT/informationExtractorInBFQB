@@ -6,7 +6,7 @@ class BERTAttention(nn.Module):
         super(BERTAttention, self).__init__()
 
         self.max_seq_length = max_seq_length
-        self.object_model = object_model
+        self.bert_model = object_model
         self.attention_layer = nn.MultiheadAttention(embed_dim=num_heads,num_heads=num_heads)
 
         #classifier
@@ -18,23 +18,20 @@ class BERTAttention(nn.Module):
         self.fc = nn.Linear(in_features=max_seq_length,out_features=num_anchor*(3+num_relation))
         self.conv = nn.Sequential(
             #cnn1hp.signal.wavelet_energyfeatures
-            nn.Conv1d(1, 32, kernel_size=5, stride=2,bias=True),#nx48x29
-            nn.Conv1d(32, 32, kernel_size=1, stride=1,bias=True),#nx48x29
-            #nn.LayerNorm(32),
-            nn.LeakyReLU(),
-            nn.Conv1d(32, 64, kernel_size=3, stride=2,bias=True),#nx64x6
-            nn.Conv1d(64, 64, kernel_size=1, stride=1,bias=True),#nx64x6
-            #nn.LayerNorm(64),
-            nn.LeakyReLU(),
-            nn.Conv1d(64, 8, kernel_size=4, stride=1,bias=True),#nxclass_numx1
-            nn.Conv1d(8, 8, kernel_size=4, stride=1,bias=True),#nxclass_numx1
+            nn.Conv1d(1, 32, kernel_size=1, stride=1,padding=1),#nx48x29
+            nn.Conv1d(32, 32, kernel_size=1, stride=1,padding=1),#nx48x29
+            nn.BatchNorm1d(32),
             nn.ReLU(),
+            nn.Conv1d(32, 64, kernel_size=1, stride=1,padding=1),#nx64x6
+            nn.Conv1d(64, 64, kernel_size=1, stride=1,padding=1),#nx64x6
+            nn.BatchNorm1d(64),
+            nn.ReLU(),
+            nn.Conv1d(64,64, kernel_size=1, stride=1,padding=1),#nxclass_numx1
+            nn.Conv1d(64, 64, kernel_size=1, stride=1,padding=1),#nxclass_numx1
             )
         self.fc1 = nn.Sequential(
-            nn.Linear(736,1024),
-            #nn.BatchNorm1d(64),
-            nn.LeakyReLU(),
-            nn.Linear(1024,out_features=num_anchor*(3+num_relation)),
+            nn.Linear(64*412,1024),
+            nn.Linear(1024,out_features=(3+self.num_relation)*num_anchor),
             #nn.BatchNorm1d(3),
             #nn.Sigmoid(),
         ) 
@@ -43,43 +40,40 @@ class BERTAttention(nn.Module):
     def forward(self, input_ids, attention_mask,labels = None):
         #print(input_ids.shape)
         # [b,max_length]
-        
+        def prt(data):
+            print(torch.sum(data[0] - data[1]))
         loss = None
-        output = self.object_model(input_ids = input_ids, attention_mask = attention_mask,labels=labels)
+        output = self.bert_model(input_ids = input_ids, attention_mask = attention_mask,labels=labels)
         logits = output['logits']
-        loss = output['loss']
+        if labels != None:
+            loss = output['loss']
 
         query =input_ids.unsqueeze(2).float()
-        key = logits[:,:,0:1]
-        value = logits[:,:,6:7]
         logits_argmax = torch.argmax(logits,dim=2).clone().detach().unsqueeze(2)
         #print(query.shape,query.dtype,logits_argmax.shape,logits_argmax.dtype)
-        bert_output = torch.cat([query,logits_argmax],dim=1)
-        attention_output, _ = self.attention_layer(bert_output,bert_output,bert_output)
+        bert_output = torch.cat([query,logits_argmax],dim=2)
 
-
-        classify_input = attention_output * bert_output
-
-        lstm_output, _ = self.lstm(classify_input)
-        #lstm_output, _ = self.lstm(bert_output)
+        lstm_output, _ = self.lstm(bert_output)
 
         #relation
-        #print(lstm_output[:,-1,:].shape)
         lstm_output = lstm_output[:,-1,:].unsqueeze(1)
         #print(lstm_output.shape) #[b,1,256]
         classifier_out = self.conv(lstm_output)
-        x = classifier_out.view(classifier_out.size(0),-1)
-        x = self.fc1(x)
-        x = x.view(classifier_out.size(0), self.anchor_num,3+self.num_relation)
+        x = classifier_out.reshape(classifier_out.size(0),-1)
+        anchor_param = self.fc1(x)
+        anchor_param = anchor_param.reshape(classifier_out.size(0), self.anchor_num,-1)
 
-        for i in range(3):
-            x[:,:,i] = x[:,:,i]
-        predict_anchor = x[:,:,0:3]
-        predict_relation = x[:,:,3:]
+        predict_anchor = anchor_param[:,:,0:2]
+        predict_conf = anchor_param[:,:,2:3]
+        predict_relation = anchor_param[:,:,3:]
+        #predict_relation = torch.softmax(anchor_relation,dim=2)
+        #print(predict_relation.shape)
+        #print(predict_relation[:,:,0:5])
 
         
         return {'predict_entity':logits,
                 'predict_anchor':predict_anchor,
+                'predict_conf': predict_conf,
                 'predict_relation':predict_relation,
                 'loss_bert':loss}
 

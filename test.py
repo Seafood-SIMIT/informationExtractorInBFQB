@@ -31,9 +31,7 @@ def main():
     parser.add_argument("--help", "-h", action="help")
     parser.add_argument("-c",'--config',default='config/default.yaml', type=str, help='set the config file')
     parser.add_argument("-m","--model_name", type=str, required= True, help='model name')
-    parser.add_argument("--do_test", type=bool, default=False, help='whether do the test step only')
-
-    parser.add_argument("--do_train", type=bool, default=True, help='whether do the test step only')
+    parser.add_argument("--checkpoint", type=str, required= True, help='checkpoint name')
 
     args = parser.parse_args()
     hp = HParam(args.config)
@@ -61,19 +59,9 @@ def main():
     dataLoaderBase = getattr(importlib.import_module(hp.data.lib_data),'dataLoaderBase')
     tokenizer,model = loadModel(hp.model)
 
-    if args.do_test:
-        model = torch.load(hp.model.ckpt_dir)
-        test_loader = dataLoaderBase(tokenizer, hp.data,'do_test')
-        doTest(hp,model,test_loader,loss_fn,logger,device)
-        return 0
-    #data
-    train_loader,valid_loader = dataLoaderBase(tokenizer, hp.data,'do_train')
-    # Criterion
-    #wandb.init()
-    if args.do_train:
-        doTrain(hp,model,train_loader,valid_loader,loss_fn,logger,device,name=args.model_name)
-    
-    # Call baks
+    model = torch.load(args.checkpoint,map_location=device)
+    test_loader = dataLoaderBase(tokenizer, hp.data,'do_test')
+    doTest(hp,model,test_loader,loss_fn,logger,device)
 
 if __name__ == "__main__":
     main()

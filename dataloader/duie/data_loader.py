@@ -78,7 +78,8 @@ class BaseDataset(Dataset):
 
         #label_map = np.zeros((self.args_data.num_labels,self.max_seq_length))
         label_map = np.zeros((self.max_seq_length))
-        label_anchor = np.zeros((self.num_anchor,3))
+        label_anchor = np.zeros((self.num_anchor,2))
+        label_conf = np.zeros((self.num_anchor,1))
         label_predicate = np.zeros(self.num_anchor)
         
         #input
@@ -92,8 +93,6 @@ class BaseDataset(Dataset):
         #unknow
         #object
         for i,spo in enumerate(spo_list):
-            if i >= 20:
-                break
             object_position = text_raw.find(spo['object']['@value'])
         #time_position = item['notes_dst'].find(item['event_date_dst'])
             label_map[object_position]=1
@@ -107,12 +106,11 @@ class BaseDataset(Dataset):
             label_map[(subject_position+1):subject_position+len(spo['subject'])-1]=5
             label_map[subject_position+len(spo['subject'])-1]=6
 
-            label_anchor[i,0] = 1
-            label_anchor[i,1] = object_position/self.max_seq_length
-            label_anchor[i,2] = (subject_position - object_position)/self.max_seq_length
+            label_conf[i] = 1
+            label_anchor[i,0] = object_position/self.max_seq_length
+            label_anchor[i,1] = (subject_position - object_position)/self.max_seq_length
             #label map
-            if spo['predicate'] in self.labelkey_map.keys():
-                label_predicate[i] = self.labelkey_map[spo['predicate']]
+            label_predicate[i] = self.labelkey_map[spo['predicate']]
 
                 #未完待续
 
@@ -123,12 +121,13 @@ class BaseDataset(Dataset):
                  'text': text_raw,
                  "label_entities":  torch.tensor(label_map,dtype=torch.long).clone().detach(),
                  'label_anchor': torch.tensor(label_anchor,dtype=torch.float).clone().detach(),
+                 'label_conf': torch.tensor(label_conf,dtype=torch.float).clone().detach(),
                  'label_relations': torch.tensor(label_predicate,dtype=torch.long).clone().detach()}
 
     def _testSet(self,item):
 # time, mid, blue, red,trible, discription
         # conver to ids
-        r_qb = item['data'][0]
+        r_qb = item['text']
         #print(r_qb)
         
         prompt_ids = self.tokenizer.encode_plus(r_qb,max_length=self.max_seq_length,
@@ -158,12 +157,12 @@ def dataLoaderBase(tokenizer,args_data,do_sth):
             train_loader = DataLoader(
                 train_dataset,
                 shuffle=True,
-                batch_size=args_data.train_batchsize,
+                batch_size= 2 if args_data.debug_mode else args_data.train_batchsize  ,
                 num_workers=args_data.num_workers,
             )
             valid_loader = DataLoader(
                 valid_dataset,
-                batch_size=args_data.valid_batchsize,
+                batch_size=2 if args_data.debug_mode else args_data.valid_batchsize,
                 shuffle=False,
                 num_workers=args_data.num_workers,
                 pin_memory=False,
@@ -171,7 +170,8 @@ def dataLoaderBase(tokenizer,args_data,do_sth):
             return train_loader, valid_loader
         elif do_sth == 'do_test':
             print('Reading datasets in test.json')
-            datasets = load_dataset(args_data.raw_file_type, data_files={'test':args_data.test_file,
+            test_file =os.path.join(args_data.data_dir,args_data.test_file ) 
+            datasets = load_dataset(args_data.raw_file_type, data_files={'test':test_file,
                                                                                                             })
             #print(datasets)
             test_dataset = BaseDataset(args_data,tokenizer,datasets['test'],'do_test')

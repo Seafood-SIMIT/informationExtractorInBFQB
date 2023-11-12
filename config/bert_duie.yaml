@@ -6,13 +6,13 @@ trainer:
   accelerator: 'gpu'
   fp: 32
   gas: 8
-  debug_mode: False
+  debug_mode: True
 
 data:
   lib_data: dataloader.duie.data_loader
   debug_mode: False
   num_labels: 7
-  num_anchor: 20
+  num_anchor: 5
   data_dir: 'data/duie'
   train_file: 'dev.json'
   valid_file: 'dev.json'
@@ -22,23 +22,23 @@ data:
   max_seq_length: 400
   train_batchsize: 64
   valid_batchsize: 16
-  test_batchsize: 1
+  test_batchsize: 2
   do_eval_only: False
   num_workers: 0
   
 model:
-  base_model: /root/autodl-tmp/bert/bert-base-chinese
+  #base_model: /root/autodl-tmp/bert/bert-base-chinese
+  base_model: bert-base-chinese
   lib_name: model.bertModel.model_loader
   train_batchsize: 10240
   max_length: 1024
   hidden_size: 128
   num_classes: 7
   num_relation: 32
-  num_anchor: 20
-  num_heads: 1
+  num_anchor: 5
+  num_heads: 2
   #cache_dir: '/Volumes/T7/FileBackup/lora_model/llama_opemlmlab'
   load_checkpoint: False
-  ckpt_dir: 'outputs/model/20231003_russiadataset-39-0.005979645330734132.model'
   weight_decay: 0.1
   learning_rate: 0.001
   warmup_ratio: 0.01
