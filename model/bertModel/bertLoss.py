@@ -37,6 +37,8 @@ class LossFn(nn.Module):
         return loss
 
     def confidence_loss(self, pred_confidence, true_confidence):
+        loss = F.mse_loss(pred_confidence, true_confidence, reduction='mean')
+        return loss
         # 计算置信度损失，使用二元交叉熵损失
         obj_mask = true_confidence.bool()  # 有目标的网格
         noobj_mask = ~obj_mask  # 无目标的网格
