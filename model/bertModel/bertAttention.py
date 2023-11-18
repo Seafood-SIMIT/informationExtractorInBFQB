@@ -59,8 +59,11 @@ class BERTAttention(nn.Module):
         anchor_param = self.fc1(anchor_param.reshape(anchor_param.size(0),-1))
         anchor_param = anchor_param.reshape(anchor_param.size(0), self.anchor_num,-1)
 
-        predict_anchor = torch.sigmoid(anchor_param[:,:,0:2])
-        predict_conf = torch.tanh(anchor_param[:,:,2:3])
+        anchor_param[:,:,0] = torch.sigmoid(anchor_param[:,:,0])
+        anchor_param[:,:,0] = torch.tanh(anchor_param[:,:,0])
+        predict_anchor = anchor_param[:,:,0:2]
+        
+        predict_conf = torch.sigmoid(anchor_param[:,:,2:3])
         predict_relation = anchor_param[:,:,3:]
         #predict_relation = torch.softmax(anchor_relation,dim=2)
         #print(predict_relation.shape)

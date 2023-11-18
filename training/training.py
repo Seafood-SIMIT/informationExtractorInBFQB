@@ -17,12 +17,13 @@ def forwardModel(batch,device,model,loss_fn):
     #print(labels.shape)
     output = model(input_ids = input_ids, attention_mask = attention_mask,labels=label_entities)
             
+    #print(output['predict_conf'],label_conf)
     #loss_relation=lossfn_relation(output['predict_relation'].view(-1,output['predict_relation'].size(2)),label_relations.view(-1))
         
     #loss = loss_relation/output['predict_relation'].size(1) + output['loss_bert'] + lossfn_anchor(output['predict_anchor'],label_anchor)
     #print(output['predict_relation'].shape)
     #print(label_relations,torch.argmax(output['predict_relation'],dim=2))
-    loss = lossfn(output,label_conf,label_anchor,label_relations)# + output['loss_bert']
+    loss = lossfn(output,label_conf,label_anchor,label_relations) + output['loss_bert']
     return output['predict_entity'], output['predict_anchor'],output['predict_relation'],loss 
 
 def validateEpoch(valid_loader,device,model,loss_fn,logger):

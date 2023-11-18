@@ -93,6 +93,8 @@ class BaseDataset(Dataset):
         #unknow
         #object
         for i,spo in enumerate(spo_list):
+            if i >= 20:
+                break
             object_position = text_raw.find(spo['object']['@value'])
         #time_position = item['notes_dst'].find(item['event_date_dst'])
             label_map[object_position]=1
